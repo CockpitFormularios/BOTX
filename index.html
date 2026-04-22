@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E2A Manual Controller - Com Proxy</title>
+    <title>E2A Manual Controller - GitHub Pages</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -187,6 +187,7 @@
             z-index: 1000;
             animation: slideIn 0.3s ease;
             display: none;
+            max-width: 400px;
         }
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
@@ -194,6 +195,7 @@
         }
         .alert-success { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
         .alert-error { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
+        .alert-info { background: #d1ecf1; color: #0c5460; border-left: 4px solid #17a2b8; }
         .loading {
             position: fixed;
             top: 50%;
@@ -231,10 +233,32 @@
             background: #fff3cd;
             border: 1px solid #ffc107;
             color: #856404;
-            padding: 10px;
+            padding: 12px;
             border-radius: 8px;
             margin-bottom: 15px;
             font-size: 13px;
+        }
+        .cors-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .cors-btn {
+            padding: 8px 15px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .cors-btn.active {
+            background: #28a745;
+        }
+        .test-mode {
+            background: #f8d7da;
+            border-color: #dc3545;
         }
     </style>
 </head>
@@ -243,17 +267,25 @@
         <div class="header">
             <div class="logo">
                 <h1>🎮 E2A Manual Controller</h1>
-                <p>Com proxy CORS - Controle manual completo</p>
+                <p>Para GitHub Pages - Com soluções CORS</p>
             </div>
         </div>
 
         <div class="config-panel">
             <div class="proxy-warning" id="proxyWarning">
-                ⚠️ Configuração do Proxy:<br>
-                Coloque o arquivo <strong>proxy.php</strong> no mesmo diretório que este arquivo HTML.<br>
-                Se estiver em servidor diferente, altere a variável PROXY_URL abaixo.
+                ⚠️ <strong>Modo GitHub Pages</strong><br>
+                Como o GitHub Pages não permite backend, usamos proxies públicos para contornar o CORS.
+                Selecione uma opção abaixo:
             </div>
-            <div class="config-row">
+            
+            <div class="cors-options">
+                <button class="cors-btn" onclick="setCorsMode('corsanywhere')" id="btn-corsanywhere">🌐 CORS Anywhere (Recomendado)</button>
+                <button class="cors-btn" onclick="setCorsMode('allorigins')" id="btn-allorigins">🔄 All Origins</button>
+                <button class="cors-btn" onclick="setCorsMode('direct')" id="btn-direct">❌ Direto (Pode falhar)</button>
+                <button class="cors-btn" onclick="setCorsMode('test')" id="btn-test">🧪 Modo Teste (Simulado)</button>
+            </div>
+            
+            <div class="config-row" style="margin-top: 15px;">
                 <div class="config-group">
                     <label>🔑 Token da API</label>
                     <input type="text" id="apiToken" placeholder="Digite seu token">
@@ -261,10 +293,6 @@
                 <div class="config-group">
                     <label>📧 E-mail</label>
                     <input type="email" id="apiEmail" placeholder="Digite seu e-mail">
-                </div>
-                <div class="config-group">
-                    <label>🌐 URL do Proxy</label>
-                    <input type="text" id="proxyUrl" value="proxy.php" placeholder="proxy.php">
                 </div>
                 <div class="config-group">
                     <button class="btn-primary" onclick="validarToken()">✅ Validar Token</button>
@@ -405,8 +433,35 @@
             token: '',
             email: '',
             validado: false,
-            proxyUrl: 'proxy.php'
+            corsMode: 'corsanywhere' // corsanywhere, allorigins, direct, test
         };
+
+        function setCorsMode(mode) {
+            config.corsMode = mode;
+            
+            // Update button styles
+            document.querySelectorAll('.cors-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${mode}`).classList.add('active');
+            
+            let message = '';
+            switch(mode) {
+                case 'corsanywhere':
+                    message = 'Usando CORS Anywhere (recomendado para testes)';
+                    break;
+                case 'allorigins':
+                    message = 'Usando All Origins proxy';
+                    break;
+                case 'direct':
+                    message = 'Modo direto - pode falhar devido a CORS';
+                    break;
+                case 'test':
+                    message = 'Modo teste - dados simulados para demonstração';
+                    break;
+            }
+            showAlert(message, 'info');
+            
+            localStorage.setItem('e2a_cors_mode', mode);
+        }
 
         function showAlert(message, type) {
             const alert = document.getElementById('alert');
@@ -427,12 +482,24 @@
         }
 
         async function apiRequest(endpoint, method = 'GET', params = {}) {
-            const proxyUrl = document.getElementById('proxyUrl').value || 'proxy.php';
-            let url = `${proxyUrl}?endpoint=${endpoint}`;
+            if (config.corsMode === 'test') {
+                // Modo teste - retorna dados simulados
+                return simulateApiResponse(endpoint, method, params);
+            }
+
+            const baseUrl = 'https://e2a.app/api';
+            let url = `${baseUrl}${endpoint}`;
             
             if (method === 'GET') {
                 const queryParams = new URLSearchParams({ token: config.token, email: config.email, ...params });
-                url += `&${queryParams}`;
+                url += `?${queryParams}`;
+            }
+
+            // Aplica proxy baseado no modo selecionado
+            if (config.corsMode === 'corsanywhere') {
+                url = `https://cors-anywhere.herokuapp.com/${url}`;
+            } else if (config.corsMode === 'allorigins') {
+                url = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
             }
 
             const options = {
@@ -446,6 +513,13 @@
 
             try {
                 const response = await fetch(url, options);
+                
+                if (config.corsMode === 'allorigins') {
+                    // Allorigins retorna o conteúdo diretamente
+                    const text = await response.text();
+                    return JSON.parse(text);
+                }
+                
                 const data = await response.json();
                 
                 if (data.error) {
@@ -454,14 +528,58 @@
                 return data;
             } catch (error) {
                 console.error('API Error:', error);
+                if (error.message.includes('Failed to fetch') && config.corsMode !== 'test') {
+                    showAlert('Erro CORS! Tente o modo "CORS Anywhere" ou "Modo Teste"', 'error');
+                }
                 throw error;
             }
+        }
+
+        function simulateApiResponse(endpoint, method, params) {
+            // Simula respostas da API para demonstração
+            if (endpoint === '/token') {
+                return { success: "true" };
+            }
+            
+            if (endpoint === '/profile/list') {
+                return [
+                    { username: "@exemplo1", social_name: "TikTok", status: "Active", id: "123" },
+                    { username: "@exemplo2", social_name: "Instagram", status: "Pending", id: "456" },
+                    { username: "@exemplo3", social_name: "Kwai", status: "Active", id: "789" }
+                ];
+            }
+            
+            if (endpoint === '/profile/info') {
+                return {
+                    username: params.username || "@exemplo",
+                    social_id: "123456789",
+                    social_name: params.social || "TikTok",
+                    status: "Active",
+                    id: "e2a_123"
+                };
+            }
+            
+            if (endpoint === '/task') {
+                return [
+                    { id: "1", action: "like", points: 10, username: "user1", link: "#" },
+                    { id: "2", action: "follow", points: 15, username: "user2", link: "#" }
+                ];
+            }
+            
+            if (endpoint === '/task/confirm') {
+                return { success: true };
+            }
+            
+            if (endpoint === '/profile/create') {
+                return { id: "novo_id_" + Date.now() };
+            }
+            
+            return { success: true };
         }
 
         async function validarToken() {
             const token = document.getElementById('apiToken').value;
             const email = document.getElementById('apiEmail').value;
-            const proxyUrl = document.getElementById('proxyUrl').value;
 
             if (!token || !email) {
                 showAlert('Preencha token e email!', 'error');
@@ -470,32 +588,42 @@
 
             config.token = token;
             config.email = email;
-            config.proxyUrl = proxyUrl;
 
             showLoading();
 
             try {
-                const proxyUrlFull = `${proxyUrl}?endpoint=/token&token=${token}&email=${email}`;
-                const response = await fetch(proxyUrlFull);
-                const data = await response.json();
+                const data = await apiRequest('/token', 'GET');
 
                 if (data.success === "true") {
                     config.validado = true;
-                    showAlert('✅ Token validado com sucesso!', 'success');
+                    
+                    let msg = '✅ Token validado com sucesso!';
+                    if (config.corsMode === 'test') {
+                        msg += ' (Modo teste - dados simulados)';
+                    }
+                    showAlert(msg, 'success');
+                    
                     document.getElementById('acoesGrid').style.display = 'grid';
                     document.getElementById('statsArea').style.display = 'grid';
                     document.getElementById('resultadosArea').style.display = 'block';
                     
                     localStorage.setItem('e2a_token', token);
                     localStorage.setItem('e2a_email', email);
-                    localStorage.setItem('e2a_proxy', proxyUrl);
                     
                     carregarEstatisticas();
                 } else {
                     showAlert('❌ Token ou email inválidos!', 'error');
                 }
             } catch (error) {
-                showAlert('Erro ao validar: ' + error.message + ' - Verifique se o proxy.php está no servidor', 'error');
+                if (config.corsMode === 'test') {
+                    config.validado = true;
+                    showAlert('✅ Modo teste ativado! Usando dados simulados.', 'success');
+                    document.getElementById('acoesGrid').style.display = 'grid';
+                    document.getElementById('statsArea').style.display = 'grid';
+                    document.getElementById('resultadosArea').style.display = 'block';
+                } else {
+                    showAlert('Erro ao validar: ' + error.message + ' - Tente o modo "CORS Anywhere" ou "Modo Teste"', 'error');
+                }
             } finally {
                 hideLoading();
             }
@@ -534,9 +662,9 @@
                 const data = await apiRequest('/profile/list', 'GET', params);
 
                 if (Array.isArray(data) && data.length > 0) {
-                    let html = '<div class="table-container"><table><thead><tr>';
+                    let html = '<div class="table-container"></table><thead><tr>';
                     html += '<th>Username</th><th>Rede Social</th><th>Status</th><th>ID</th>';
-                    html += '</tr></thead><tbody>';
+                    html += '</thead><tbody>';
 
                     data.forEach(conta => {
                         html += `<tr>
@@ -630,7 +758,7 @@
                     const tasks = Array.isArray(data) ? data : [data];
                     
                     if (tasks.length > 0 && tasks[0].id) {
-                        let html = '<div class="table-container"><table><thead><tr>';
+                        let html = '<div class="table-container"> <table><thead><tr>';
                         html += '<th>Ação</th><th>Pontos</th><th>Username</th><th>Link</th><th>Confirmar</th>';
                         html += '</tr></thead><tbody>';
 
@@ -732,12 +860,17 @@
         // Carregar configuração salva
         const savedToken = localStorage.getItem('e2a_token');
         const savedEmail = localStorage.getItem('e2a_email');
-        const savedProxy = localStorage.getItem('e2a_proxy');
+        const savedMode = localStorage.getItem('e2a_cors_mode');
         
         if (savedToken && savedEmail) {
             document.getElementById('apiToken').value = savedToken;
             document.getElementById('apiEmail').value = savedEmail;
-            if (savedProxy) document.getElementById('proxyUrl').value = savedProxy;
+        }
+        
+        if (savedMode) {
+            setCorsMode(savedMode);
+        } else {
+            setCorsMode('corsanywhere');
         }
     </script>
 </body>
