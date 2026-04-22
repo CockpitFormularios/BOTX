@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E2A Manual Controller - Com Proxy</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1300px; margin: 0 auto; }
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 20px 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .logo h1 {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 28px;
+        }
+        .config-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .config-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .config-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        .config-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .config-group input, .config-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        .action-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .action-card:hover { transform: translateY(-5px); }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .card-header h2 { font-size: 20px; color: #333; }
+        .card-icon { font-size: 28px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 13px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .btn-action {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .btn-executar { background: #28a745; color: white; }
+        .btn-executar:hover { background: #218838; transform: translateY(-2px); }
+        .btn-buscar { background: #17a2b8; color: white; }
+        .btn-buscar:hover { background: #138496; transform: translateY(-2px); }
+        .result-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .table-container {
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+            position: sticky;
+            top: 0;
+        }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .status-Active { background: #d4edda; color: #155724; }
+        .status-Pending { background: #fff3cd; color: #856404; }
+        .status-Inactive { background: #f8d7da; color: #721c24; }
+        .btn-confirm {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 2px;
+            font-size: 12px;
+        }
+        .btn-fail {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 2px;
+            font-size: 12px;
+        }
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            display: none;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .alert-success { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
+        .alert-error { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            z-index: 1001;
+            display: none;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-value { font-size: 28px; font-weight: bold; color: #2a5298; }
+        .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
+        .info-box {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #2a5298;
+        }
+        .proxy-warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <h1>🎮 E2A Manual Controller</h1>
+                <p>Com proxy CORS - Controle manual completo</p>
+            </div>
+        </div>
+
+        <div class="config-panel">
+            <div class="proxy-warning" id="proxyWarning">
+                ⚠️ Configuração do Proxy:<br>
+                Coloque o arquivo <strong>proxy.php</strong> no mesmo diretório que este arquivo HTML.<br>
+                Se estiver em servidor diferente, altere a variável PROXY_URL abaixo.
+            </div>
+            <div class="config-row">
+                <div class="config-group">
+                    <label>🔑 Token da API</label>
+                    <input type="text" id="apiToken" placeholder="Digite seu token">
+                </div>
+                <div class="config-group">
+                    <label>📧 E-mail</label>
+                    <input type="email" id="apiEmail" placeholder="Digite seu e-mail">
+                </div>
+                <div class="config-group">
+                    <label>🌐 URL do Proxy</label>
+                    <input type="text" id="proxyUrl" value="proxy.php" placeholder="proxy.php">
+                </div>
+                <div class="config-group">
+                    <button class="btn-primary" onclick="validarToken()">✅ Validar Token</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats" id="statsArea" style="display: none;">
+            <div class="stat-item">
+                <div class="stat-value" id="totalContas">0</div>
+                <div class="stat-label">Total de Contas</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="contasAtivas">0</div>
+                <div class="stat-label">Contas Ativas</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalAcoes">0</div>
+                <div class="stat-label">Ações Pendentes</div>
+            </div>
+        </div>
+
+        <div class="actions-grid" id="acoesGrid" style="display: none;">
+            <div class="action-card">
+                <div class="card-header">
+                    <span class="card-icon">📋</span>
+                    <h2>Listar Contas</h2>
+                </div>
+                <div class="form-group">
+                    <label>Rede Social</label>
+                    <select id="listSocial">
+                        <option value="tiktok">TikTok</option>
+                        <option value="insta">Instagram</option>
+                        <option value="kwai">Kwai</option>
+                        <option value="face">Facebook</option>
+                        <option value="twitter">Twitter</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status (opcional)</label>
+                    <select id="listStatus">
+                        <option value="">Todos</option>
+                        <option value="Active">Ativos</option>
+                        <option value="Pending">Pendentes</option>
+                        <option value="Inactive">Inativos</option>
+                    </select>
+                </div>
+                <button class="btn-action btn-buscar" onclick="listarContas()">🔍 EXECUTAR LISTAGEM</button>
+            </div>
+
+            <div class="action-card">
+                <div class="card-header">
+                    <span class="card-icon">➕</span>
+                    <h2>Cadastrar Conta</h2>
+                </div>
+                <div class="form-group">
+                    <label>Rede Social</label>
+                    <select id="createSocial">
+                        <option value="tiktok">TikTok</option>
+                        <option value="insta">Instagram</option>
+                        <option value="kwai">Kwai</option>
+                        <option value="face">Facebook</option>
+                        <option value="twitter">Twitter</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="createUsername" placeholder="@usuario">
+                </div>
+                <button class="btn-action btn-executar" onclick="cadastrarConta()">💾 EXECUTAR CADASTRO</button>
+            </div>
+
+            <div class="action-card">
+                <div class="card-header">
+                    <span class="card-icon">🎯</span>
+                    <h2>Buscar Ações</h2>
+                </div>
+                <div class="form-group">
+                    <label>Rede Social</label>
+                    <select id="taskSocial">
+                        <option value="tiktok">TikTok</option>
+                        <option value="insta">Instagram</option>
+                        <option value="kwai">Kwai</option>
+                        <option value="face">Facebook</option>
+                        <option value="twitter">Twitter</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="taskUsername" placeholder="@usuario">
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Ação (opcional)</label>
+                    <select id="taskType">
+                        <option value="">Todas</option>
+                        <option value="like">Curtir</option>
+                        <option value="follow">Seguir</option>
+                        <option value="comment">Comentar</option>
+                    </select>
+                </div>
+                <button class="btn-action btn-buscar" onclick="buscarAcoes()">🎮 EXECUTAR BUSCA</button>
+            </div>
+
+            <div class="action-card">
+                <div class="card-header">
+                    <span class="card-icon">ℹ️</span>
+                    <h2>Info da Conta</h2>
+                </div>
+                <div class="form-group">
+                    <label>Rede Social</label>
+                    <select id="infoSocial">
+                        <option value="tiktok">TikTok</option>
+                        <option value="insta">Instagram</option>
+                        <option value="kwai">Kwai</option>
+                        <option value="face">Facebook</option>
+                        <option value="twitter">Twitter</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="infoUsername" placeholder="@usuario">
+                </div>
+                <button class="btn-action btn-buscar" onclick="buscarInfo()">🔍 EXECUTAR CONSULTA</button>
+            </div>
+        </div>
+
+        <div class="result-card" id="resultadosArea" style="display: none;">
+            <h3>📊 Resultados</h3>
+            <div id="resultadoConteudo"></div>
+        </div>
+    </div>
+
+    <div id="alert" class="alert"></div>
+    <div id="loading" class="loading">⏳ Processando...</div>
+
+    <script>
+        let config = {
+            token: '',
+            email: '',
+            validado: false,
+            proxyUrl: 'proxy.php'
+        };
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            alert.style.display = 'block';
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 4000);
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        async function apiRequest(endpoint, method = 'GET', params = {}) {
+            const proxyUrl = document.getElementById('proxyUrl').value || 'proxy.php';
+            let url = `${proxyUrl}?endpoint=${endpoint}`;
+            
+            if (method === 'GET') {
+                const queryParams = new URLSearchParams({ token: config.token, email: config.email, ...params });
+                url += `&${queryParams}`;
+            }
+
+            const options = {
+                method: method,
+                headers: { 'Content-Type': 'application/json' }
+            };
+
+            if (method === 'POST') {
+                options.body = JSON.stringify({ token: config.token, email: config.email, ...params });
+            }
+
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        async function validarToken() {
+            const token = document.getElementById('apiToken').value;
+            const email = document.getElementById('apiEmail').value;
+            const proxyUrl = document.getElementById('proxyUrl').value;
+
+            if (!token || !email) {
+                showAlert('Preencha token e email!', 'error');
+                return;
+            }
+
+            config.token = token;
+            config.email = email;
+            config.proxyUrl = proxyUrl;
+
+            showLoading();
+
+            try {
+                const proxyUrlFull = `${proxyUrl}?endpoint=/token&token=${token}&email=${email}`;
+                const response = await fetch(proxyUrlFull);
+                const data = await response.json();
+
+                if (data.success === "true") {
+                    config.validado = true;
+                    showAlert('✅ Token validado com sucesso!', 'success');
+                    document.getElementById('acoesGrid').style.display = 'grid';
+                    document.getElementById('statsArea').style.display = 'grid';
+                    document.getElementById('resultadosArea').style.display = 'block';
+                    
+                    localStorage.setItem('e2a_token', token);
+                    localStorage.setItem('e2a_email', email);
+                    localStorage.setItem('e2a_proxy', proxyUrl);
+                    
+                    carregarEstatisticas();
+                } else {
+                    showAlert('❌ Token ou email inválidos!', 'error');
+                }
+            } catch (error) {
+                showAlert('Erro ao validar: ' + error.message + ' - Verifique se o proxy.php está no servidor', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function carregarEstatisticas() {
+            if (!config.validado) return;
+
+            try {
+                const data = await apiRequest('/profile/list', 'GET', { social: 'tiktok', quantity: 1000 });
+                if (Array.isArray(data)) {
+                    const total = data.length;
+                    const ativas = data.filter(c => c.status === 'Active').length;
+                    document.getElementById('totalContas').textContent = total;
+                    document.getElementById('contasAtivas').textContent = ativas;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+            }
+        }
+
+        async function listarContas() {
+            if (!config.validado) {
+                showAlert('Valide o token primeiro!', 'error');
+                return;
+            }
+
+            const social = document.getElementById('listSocial').value;
+            const status = document.getElementById('listStatus').value;
+            const params = { social, quantity: 1000 };
+            if (status) params.status = status;
+
+            showLoading();
+
+            try {
+                const data = await apiRequest('/profile/list', 'GET', params);
+
+                if (Array.isArray(data) && data.length > 0) {
+                    let html = '<div class="table-container"><table><thead><tr>';
+                    html += '<th>Username</th><th>Rede Social</th><th>Status</th><th>ID</th>';
+                    html += '</tr></thead><tbody>';
+
+                    data.forEach(conta => {
+                        html += `<tr>
+                            <td>${conta.username || '-'}</td>
+                            <td>${conta.social_name || '-'}</td>
+                            <td><span class="status-badge status-${conta.status}">${conta.status || 'Inactive'}</span></td>
+                            <td>${conta.id || '-'}</td>
+                        </tr>`;
+                    });
+
+                    html += '</tbody></table></div>';
+                    html += `<div class="info-box">📊 Total encontrado: ${data.length} conta(s)</div>`;
+
+                    document.getElementById('resultadoConteudo').innerHTML = html;
+                    showAlert(`✅ ${data.length} contas encontradas!`, 'success');
+                } else {
+                    document.getElementById('resultadoConteudo').innerHTML = '<div class="info-box">⚠️ Nenhuma conta encontrada</div>';
+                    showAlert('Nenhuma conta encontrada', 'error');
+                }
+            } catch (error) {
+                showAlert('Erro ao listar contas: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function cadastrarConta() {
+            if (!config.validado) {
+                showAlert('Valide o token primeiro!', 'error');
+                return;
+            }
+
+            const social = document.getElementById('createSocial').value;
+            const username = document.getElementById('createUsername').value;
+
+            if (!username) {
+                showAlert('Informe o username!', 'error');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const data = await apiRequest('/profile/create', 'POST', { social, username });
+
+                if (data.id) {
+                    document.getElementById('createUsername').value = '';
+                    document.getElementById('resultadoConteudo').innerHTML = `
+                        <div class="info-box">
+                            ✅ Conta cadastrada com sucesso!<br>
+                            📝 ID: ${data.id}<br>
+                            ⏳ Aguarde alguns segundos para ativação
+                        </div>
+                    `;
+                    showAlert(`✅ Conta cadastrada! ID: ${data.id}`, 'success');
+                    carregarEstatisticas();
+                } else {
+                    showAlert('Erro ao cadastrar conta', 'error');
+                }
+            } catch (error) {
+                showAlert('Erro no cadastro: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function buscarAcoes() {
+            if (!config.validado) {
+                showAlert('Valide o token primeiro!', 'error');
+                return;
+            }
+
+            const social = document.getElementById('taskSocial').value;
+            const username = document.getElementById('taskUsername').value;
+            const action_type = document.getElementById('taskType').value;
+
+            if (!username) {
+                showAlert('Informe o username!', 'error');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const params = { social, username };
+                if (action_type) params.action_type = action_type;
+                
+                const data = await apiRequest('/task', 'GET', params);
+
+                if (data && !data.error) {
+                    const tasks = Array.isArray(data) ? data : [data];
+                    
+                    if (tasks.length > 0 && tasks[0].id) {
+                        let html = '<div class="table-container"><table><thead><tr>';
+                        html += '<th>Ação</th><th>Pontos</th><th>Username</th><th>Link</th><th>Confirmar</th>';
+                        html += '</tr></thead><tbody>';
+
+                        tasks.forEach(task => {
+                            html += `<tr>
+                                <td>${task.action || '-'}</td>
+                                <td>${task.points || 0}</td>
+                                <td>${task.username || '-'}</td>
+                                <td><a href="${task.link || '#'}" target="_blank">Abrir</a></td>
+                                <td>
+                                    <button class="btn-confirm" onclick="confirmarAcao('${task.id}', 'ok', '${social}', '${username}')">✓ OK</button>
+                                    <button class="btn-fail" onclick="confirmarAcao('${task.id}', 'fail', '${social}', '${username}')">✗ FAIL</button>
+                                </td>
+                            </tr>`;
+                        });
+
+                        html += '</tbody></table></div>';
+                        html += `<div class="info-box">🎯 ${tasks.length} ação(ões) encontrada(s)</div>`;
+
+                        document.getElementById('resultadoConteudo').innerHTML = html;
+                        document.getElementById('totalAcoes').textContent = tasks.length;
+                        showAlert(`✅ ${tasks.length} ações encontradas!`, 'success');
+                    } else {
+                        document.getElementById('resultadoConteudo').innerHTML = '<div class="info-box">⚠️ Nenhuma ação disponível no momento</div>';
+                        showAlert('Nenhuma ação disponível', 'error');
+                    }
+                } else {
+                    document.getElementById('resultadoConteudo').innerHTML = '<div class="info-box">⚠️ Nenhuma ação disponível</div>';
+                }
+            } catch (error) {
+                showAlert('Erro ao buscar ações: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function confirmarAcao(actionId, status, social, username) {
+            showLoading();
+
+            try {
+                const data = await apiRequest('/task/confirm', 'POST', {
+                    social, username, action_id: actionId, status
+                });
+
+                if (data.success === true) {
+                    showAlert(`✅ Ação confirmada com ${status === 'ok' ? 'SUCESSO' : 'FALHA'}!`, 'success');
+                    buscarAcoes();
+                } else {
+                    showAlert('❌ Erro ao confirmar ação', 'error');
+                }
+            } catch (error) {
+                showAlert('Erro na confirmação: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function buscarInfo() {
+            if (!config.validado) {
+                showAlert('Valide o token primeiro!', 'error');
+                return;
+            }
+
+            const social = document.getElementById('infoSocial').value;
+            const username = document.getElementById('infoUsername').value;
+
+            if (!username) {
+                showAlert('Informe o username!', 'error');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const data = await apiRequest('/profile/info', 'GET', { social, username });
+
+                if (data && !data.error) {
+                    let html = '<div class="info-box">';
+                    html += `<p><strong>📝 Username:</strong> ${data.username || '-'}</p>`;
+                    html += `<p><strong>🆔 Social ID:</strong> ${data.social_id || '-'}</p>`;
+                    html += `<p><strong>🌐 Rede Social:</strong> ${data.social_name || '-'}</p>`;
+                    html += `<p><strong>📊 Status:</strong> <span class="status-badge status-${data.status}">${data.status || 'Inactive'}</span></p>`;
+                    html += `<p><strong>🔑 ID E2A:</strong> ${data.id || '-'}</p>`;
+                    html += '</div>';
+
+                    document.getElementById('resultadoConteudo').innerHTML = html;
+                    showAlert('✅ Informações carregadas!', 'success');
+                } else {
+                    document.getElementById('resultadoConteudo').innerHTML = '<div class="info-box">⚠️ Conta não encontrada</div>';
+                    showAlert('Conta não encontrada', 'error');
+                }
+            } catch (error) {
+                showAlert('Erro ao buscar informações', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Carregar configuração salva
+        const savedToken = localStorage.getItem('e2a_token');
+        const savedEmail = localStorage.getItem('e2a_email');
+        const savedProxy = localStorage.getItem('e2a_proxy');
+        
+        if (savedToken && savedEmail) {
+            document.getElementById('apiToken').value = savedToken;
+            document.getElementById('apiEmail').value = savedEmail;
+            if (savedProxy) document.getElementById('proxyUrl').value = savedProxy;
+        }
+    </script>
+</body>
+</html>
